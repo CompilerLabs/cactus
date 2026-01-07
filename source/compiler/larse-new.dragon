@@ -7,9 +7,24 @@
 ]
 [ workspace ]
 !cactus.larsing.workspace(
+    [ currents ]
     current_files !dragon.current, [ multiple files ]
     current_file !dragon.current, [ only one file ]
-    current_text_location !dragon.text.location
+    current_text_location !cactus.text.location,
+
+    [ error and search data ]
+    ran_out_of_characters !dragon.cell,
+    found !dragon.cell,
+    not_found !dragon.cell,
+    error !dragon.error
+)
+
+[ cactus text location ]
+!cactus.text.location(
+    [ locations ]
+    file_index !dragon.cell,
+    line_number !dragon.cell,
+    character_range !dragon.buffer
 )
 
 [
