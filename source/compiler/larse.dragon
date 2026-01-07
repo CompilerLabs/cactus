@@ -316,6 +316,9 @@ cactus.larse(user_code !dragon.buffer)(output !cactus.larsling.program, error !d
             }
 
             [ search for name character ]
+            cactus.larse.name(workspace)(workspace, function_name, ran_out_of_characters, found, not_found)
+
+            [ parse function if found name ]
             @larse.one_file.search.function_name found = {
                 [ get input and output arguments ]
                 [ todo ]
@@ -341,8 +344,6 @@ cactus.larse(user_code !dragon.buffer)(output !cactus.larsling.program, error !d
 
     [ exit ]
 }
-
-[ larse a function arguments ]
 
 [ larse a structure definition argument ]
 cactus.larse.structure.argument(workspace !cactus.larsing.workspace, argument_index !dragon.cell, error !dragon.error)(workspace !cactus.larsing.workspace, argument !cactus.larsling.structure.argument, ran_out_of_characters !dragon.cell, found !dragon.cell, not_found !dragon.cell, error !dragon.error) = {
@@ -779,3 +780,5 @@ cactus.larse.print.structure.argument(argument !cactus.larsling.structure.argume
     [ print type ]
     cactus.larse.print.text(argument:type)()
 }
+
+
