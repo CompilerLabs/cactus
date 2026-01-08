@@ -19,7 +19,7 @@
     error !dragon.error,
 
     [ outputs ]
-    output !cactus.larsling.program
+    program !cactus.larsling.program
 )
 
 [ cactus text location ]
@@ -43,33 +43,22 @@ cactus.larse(user_code !dragon.buffer)(output !cactus.larsling.program, error !d
     dragon.pack(user_code, user_code:start)(workspace:current_files !dragon.current)
     dragon.error.setup_blank()(workspace:error)
 
-    [ print error ]
-    dragon.error.print(workspace:error)()
-
     [ open program ]
     cactus.open.larsling.program()(output)
 
     [ larse everything ]
-    cactus.larse.all_files(workspace)(workspace)
+    cactus.larse.files(workspace)(workspace)
 
     [ setup output ]
-    dragon.copy(workspace:output)(output)
+    dragon.copy(workspace:program)(output)
     dragon.copy(workspace:error)(error)
 }
 
 [ larse all files ]
-cactus.larse.all_files(workspace !cactus.larsing.workspace)(workspace !cactus.larsing.workspace) = {
+cactus.larse.files(workspace !cactus.larsing.workspace)(workspace !cactus.larsing.workspace) = {
     [ setup constants ]
     dragon.pack.null()(dummy.buffer !dragon.buffer)
-    dragon.pack.null()(dummy.structure_definition !cactus.larsling.structure)
-    dragon.pack.null()(dummy.structure_argument !cactus.larsling.structure.argument)
     dragon.structure.byte_size(dummy.buffer)(buffer.byte_size)
-    dragon.structure.byte_size(dummy.structure_definition)(structure_definition.byte_size)
-    dragon.structure.byte_size(dummy.structure_argument)(structure_argument.byte_size)
-    dragon.set(dragon.hexadecimal.28)(left_parenthesis)
-    dragon.set(dragon.hexadecimal.29)(right_parenthesis)
-    dragon.set(dragon.hexadecimal.21)(exclamation_point)
-    dragon.set(dragon.hexadecimal.3D)(equals_sign)
 
     [ loop over all files ]
     @larse.all_files dragon.always = {
@@ -85,17 +74,13 @@ cactus.larse.all_files(workspace !cactus.larsing.workspace)(workspace !cactus.la
         [ setup current file ]
         dragon.pack(file, file:start)(workspace:current_file !dragon.current)
 
-        [ check to see if file is empty ]
-        dragon.integer.within_range(file:start, file:start, file:end)(in_range, out_of_range)
-        dragon.jump(out_of_range, @larse.next_file)()
-
-        [ reset text location line number & character index ]
-        dragon.copy(dragon.constant.1)(workspace:current_text_location:line_number)
-        dragon.pack.null()(workspace:current_text_location:character_range !dragon.buffer)
-
         [ larse file ]
+        cactus.larse.file(workspace)(workspace)
 
-        [ mext file ]
+        [ check for error ]
+        dragon.jump.bottom(workspace:error:occured, @larse.all_files)()
+
+        [ next file ]
         @larse.next_file
 
         [ advance files current ]
@@ -106,6 +91,22 @@ cactus.larse.all_files(workspace !cactus.larsing.workspace)(workspace !cactus.la
 
         [ next file larse ]
         dragon.jump.top(dragon.always, @larse.all_files)()
+    }
+}
+
+[ larse one file ]
+cactus.larse.file(workspace !cactus.larsing.workspace)(workspace !cactus.larsing.workspace) = {
+    [ check to see if file is empty ]
+    dragon.integer.within_range(workspace:current_file:buffer:start, workspace:current_file:buffer:start, workspace:current_file:buffer:end)(in_range, out_of_range)
+    dragon.jump.bottom(out_of_range, @dragon.master_scope)()
+
+    [ reset text location line number & character range ]
+    dragon.copy(dragon.constant.1)(workspace:current_text_location:line_number)
+    dragon.pack.null()(workspace:current_text_location:character_range !dragon.buffer)
+
+    [ larse all items in the file ]
+    @larse.items dragon.always = {
+
     }
 }
 
