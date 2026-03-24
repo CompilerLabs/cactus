@@ -1,0 +1,20 @@
+[
+    Cactus Text
+]
+
+[
+    Types
+]
+
+[ text ]
+!cactus.text(
+    value !df.buffer,
+    location !cactus.text.location
+)
+
+[ text location ]
+!cactus.text.location(
+    file_index !df.cell,
+    line_number !df.cell,
+    character_range !df.buffer [ is a starting and ending offset into the buffer it resides in ]
+)

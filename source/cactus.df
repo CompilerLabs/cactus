@@ -1,0 +1,14 @@
+[ main ]
+df.main()() = {
+    [ display startup message ]
+    df.set("[🌵] Running the cactus compiler...! Ouch!%0a;")(message)
+    df.print.buffer_as_string(message)()
+
+    [ get all user code buffers from context input ]
+    df.copy(df.context.input)(user_codes)
+    
+    [ larse files ]
+    cactus.larse(user_codes)(output, error)
+    df.error.print_if_occured(error)()
+    df.jump.bottom(error:occured, @df.master_scope)()
+}

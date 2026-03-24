@@ -1,0 +1,231 @@
+[
+    Cactus's Lexer
+]
+
+[
+    Lexing Workspace
+]
+[ workspace ]
+!cactus.lexing.workspace(
+    current_files !df.current, [ multiple files ]
+    current_file !df.current, [ only one file ]
+    current_text_location !cactus.text.location
+)
+
+[
+    Lexing
+]
+[ lex all buffers (loaded files) ]
+cactus.compiler.lex(files !df.buffer, error !df.error)(lexlings !cactus.lexlings, error !df.error) = {
+    [ setup types ]
+    df.pack.increment(df.constant.0, df.constant.1)(types !cactus.lexling.types)
+    
+    [ setup workspace ]
+    df.pack.null()(lexing_workspace !cactus.lexing.workspace)
+
+    [ setup current for files buffer ]
+    df.pack(files, files:start)(workspace:current_files !df.current)
+
+    [ open lexlings ]
+    cactus.lexlings.open()(lexlings)
+
+    [ loop over all files (user codes) ]
+    @lex.all_files df.always = {
+        [ check for files ]
+        df.current.within_range(workspace:current_files)(in_range, out_of_range)
+        df.jump.bottom(out_of_range, @lex.all_files)()
+
+        [ get file ]
+        df.buffer.calculate.end_address(workspace:current_files:progress, buffer.byte_size)(current_files.end)
+        df.pack(workspace:current_files:progress, current_files.end)(current_files.as_buffer !df.buffer)
+        df.buffer_to_structure(current_files.as_buffer)(file !df.buffer)
+
+        [ setup current file ]
+        df.pack(file, file:start)(workspace:current_file !df.current)
+
+        [ reset line number & update character range ]
+        df.copy(df.constant.1)(workspace:current_text_location:line_number)
+        df.pack(df.constant.0, df.constant.0)(workspace:current_text_location:character_range !cactus.text.location)
+
+        [ lex one file ]
+        @lex.one_file df.always = {
+            [ skip whitespace ]
+            cactus.lexing.skip_whitespace(workspace, error)(workspace, ran_out_of_characters, error)
+            df.jump.bottom(ran_out_of_characters, @lex.one_file)()
+
+            [ get character ]
+            df.address_to_cell(workspace:current_file:progress, df.ascii_character.byte_size)(character, advancement)
+
+            [ search for lexling ]
+
+        }
+    }
+}
+
+[ search for a single character lexling ]
+cactus.lexing.check_for_single_character_lexling(workspace !cactus.lexing.workspace)(workspace !cactus.lexing.workspace) = {
+
+}
+
+[ check for a character ]
+cactus.lexing.check_for_character(workspace !cactus.lexing.workspace, character_range_start !df.cell, character_range_end !df.cell, advance_on_found !df.cell, error !df.error)(workspace !cactus.lexing.workspace, ran_out_of_characters !df.cell, found !df.cell, not_found !df.cell, error !df.error) = {
+    [ get character ]
+    df.address_to_cell(workspace:current_file:progress, df.ascii_character.byte_size)(character, advancement)
+    
+    [ check for character ]
+    df.integer.within_range(character_range_start, character, character_range_end)(found, not_found)
+
+    [ if should advance ]
+    @advance advance_on_found = {
+        [ was found ]
+        @found found = {
+            [ advance ]
+            cactus.lex.advance_character(workspace, advancement, df.ascii_character.byte_size)(workspace)
+        }
+    }
+}
+
+[ skip over whitespace ]
+cactus.lexing.skip_whitespace(workspace !cactus.lexing.workspace, error !df.error)(workspace !cactus.lexing.workspace, ran_out_of_characters !df.cell, error !df.error) = {
+    [ setup characters ]
+    df.set(df.integer.32)(whitespace.range.end)
+    df.pack(df.constant.0, whitespace.range.end)(whitespace !df.buffer)
+    df.set(df.hexadecimal.0A)(new_line)
+    df.set(df.hexadecimal.5B)(left_square_bracket)
+    df.set(df.hexadecimal.5D)(right_square_bracket)
+
+    [ setup comment depth ]
+    df.copy(df.constant.0)(comment_depth)
+
+    [ loop over characters ]
+    @skip_whitespace df.always = {
+        [ make sure there are more characters to read ]
+        df.current.within_range(workspace:current_file)(in_range, ran_out_of_characters)
+        @ran_out_of_characters ran_out_of_characters = {
+            [ check to see if a comment was not closed, if not then error ]
+            df.integer.within_range(df.constant.0, comment_depth, df.constant.0)(closed, not_closed)
+            @comment_not_closed not_closed = {
+                [ raise error ]
+                df.set("Lexing Error: A nested comment was not closed all the way and ends abruptly at the current file's end.")(error_message)
+                cactus.error.generate(error_message, workspace:current_text_location)(error)
+            }
+
+            [ jump ]
+            df.jump.bottom(ran_out_of_characters, @df.master_scope)()
+        }
+
+        [ get character ]
+        df.address_to_cell(workspace:current_file:progress, df.ascii_character.byte_size)(character, advancement)
+
+        [ check if is new line ]
+        df.integer.within_range(new_line, character, new_line)(in_range, out_of_range)
+        @new_line_detected in_range = {
+            [ advance line number marker ]
+            df.integer.add(workspace:current_text_location:line_number, df.constant.1)(workspace:current_text_location:line_number)
+
+            [ advance ]
+            df.jump(in_range, @advance)()
+        }
+
+        [ check for left square bracket ]
+        df.integer.within_range(left_square_bracket, character, left_square_bracket)(in_range, out_of_range)
+        @left_square_bracket in_range = {
+            [ increment comment depth ]
+            df.integer.add(comment_depth, df.constant.1)(comment_depth)
+
+            [ next character ]
+            df.jump(in_range, @advance)()
+        }
+        
+        [ check for right square bracket ]
+        df.integer.within_range(right_square_bracket, character, right_square_bracket)(in_range, out_of_range)
+        @right_square_bracket in_range = {
+            [ check for comment depth error ]
+            df.integer.within_range(df.constant.0, comment_depth, df.constant.0)(in_range, out_of_range)
+            @right_square_bracket.underflow in_range = {
+                [ raise error ]
+                df.set("Lexing Error: A comment depth underflow occured.")(error_message)
+                cactus.error.generate(error_message, workspace:current_text_location)(error)
+
+                [ exit loop ]
+                df.jump.bottom(error:occured, @df.master_scope)()
+            }
+
+            [ decrement comment depth ]
+            df.integer.subtract(comment_depth, df.constant.1)(comment_depth)
+
+            [ next character ]
+            df.jump(df.always, @advance)()
+        }
+
+        [ check if is not nested ]
+        df.integer.within_range(df.constant.0, comment_depth, df.constant.0)(in_range, out_of_range)
+        @nested_comment_remaining out_of_range = {
+            df.jump(out_of_range, @advance)()
+        }
+
+        [ check if is normal whitespace ]
+        df.integer.within_range(whitespace:start, character, whitespace:end)(in_range, out_of_range)
+        @whitespace_remaining in_range = {
+            df.jump(in_range, @advance)()
+        }
+
+        [ no more whitespace to skip ]
+        df.jump.bottom(df.always, @df.master_scope)()
+
+        [ advancement marker ]
+        @advance
+
+        [ advance current and statistics ]
+        df.copy(advancement)(workspace:current_file:progress)
+        df.integer.add(workspace:current_text_location:character_index, df.ascii_character.byte_size)(workspace:current_text_location:character_index)
+
+        [ jump to start of loop ]
+        df.jump.top(df.always, @skip_whitespace)()
+    }
+}
+
+[
+    Lexing Types
+]
+[ lexlings ]
+!cactus.lexlings(
+    list !df.list
+)
+
+[ open lexlings ]
+cactus.lexlings.open()(lexlings !cactus.lexlings) = {
+    [ do increase math ]
+    df.set(df.integer.2048)(increase)
+    df.pack.null()(dummy.lexling !cactus.lexling)
+    df.structure.byte_size(dummy.lexling)(lexling.byte_size)
+    df.integer.multiply(increase, lexling.byte_size)(increase)
+
+    [ open list ]
+    df.list.open(increase)(lexlings:list)
+}
+
+[ lexling types ]
+!cactus.lexling.types(
+    invalid !df.cell,
+    left_parenthesis !df.cell,
+    right_parenthesis !df.cell,
+    left_curly_bracket !df.cell,
+    right_curly_bracket !df.cell,
+    name !df.cell,
+    colon !df.cell,
+    comma !df.cell,
+    at !df.cell,
+    equals !df.cell,
+    exclamation !df.cell,
+    hashtag !df.cell,
+    string_literal !df.cell,
+    end_of_file !df.cell,
+    end_of_files !df.cell
+)
+
+[ lexling ]
+!cactus.lexling(
+    type !df.cell,
+    text !cactus.text
+)

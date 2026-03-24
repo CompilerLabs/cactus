@@ -1,7 +1,7 @@
 {
     "file_paths": [
-        "../cactus/source/cactus.dragon",
-        "../cactus/source/compiler/larse-new.dragon",
-        "../cactus/source/compiler/error.dragon"
+        "../cactus/source/cactus.df",
+        "../cactus/source/compiler/larse-new.df",
+        "../cactus/source/compiler/error.df"
     ]
 }
